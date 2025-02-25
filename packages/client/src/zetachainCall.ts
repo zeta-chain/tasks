@@ -63,25 +63,9 @@ export const zetachainCall = async function (
 
   const functionSignature = utils.id(args.function).slice(0, 10);
 
-  const valuesArray = args.values.map((value, index) => {
-    const type = args.types[index];
-
-    if (type === "bool") {
-      try {
-        return JSON.parse(value.toLowerCase());
-      } catch (e) {
-        throw new Error(`Invalid boolean value: ${value}`);
-      }
-    } else if (type.startsWith("uint") || type.startsWith("int")) {
-      return ethers.BigNumber.from(value);
-    } else {
-      return value;
-    }
-  });
-
   const encodedParameters = utils.defaultAbiCoder.encode(
     args.types,
-    valuesArray
+    args.values
   );
 
   const message = utils.hexlify(
@@ -98,10 +82,15 @@ export const zetachainCall = async function (
     args.txOptions
   );
   await approve.wait();
+
+  const receiver = args.receiver.startsWith("0x")
+    ? args.receiver
+    : ethers.utils.toUtf8Bytes(args.receiver);
+
   const tx = await gateway[
     "call(bytes,address,bytes,(uint256,bool),(address,bool,address,bytes,uint256))"
   ](
-    utils.hexlify(args.receiver),
+    receiver,
     gasZRC20,
     message,
     args.callOptions,
